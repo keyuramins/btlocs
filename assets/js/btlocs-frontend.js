@@ -1,0 +1,1 @@
+// Custom frontend JS for BTLOCS Product Locations plugin 

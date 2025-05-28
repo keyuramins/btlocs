@@ -1,0 +1,1 @@
+// Custom admin JS for BTLOCS Product Locations plugin 
