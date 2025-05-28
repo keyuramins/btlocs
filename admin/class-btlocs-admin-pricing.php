@@ -52,9 +52,7 @@ class BTLOCS_Admin_Pricing {
             $location_id = $loc['id'];
             $regular = isset($_POST['btlocs_var_regular_price'][$variation_id][$location_id]) ? floatval($_POST['btlocs_var_regular_price'][$variation_id][$location_id]) : null;
             $sale = isset($_POST['btlocs_var_sale_price'][$variation_id][$location_id]) ? floatval($_POST['btlocs_var_sale_price'][$variation_id][$location_id]) : null;
-            // Remove old
             $wpdb->delete($table, ['product_id'=>$parent_id, 'location_id'=>$location_id, 'variation_id'=>$variation_id]);
-            // Insert new if set
             if($regular !== null || $sale !== null) {
                 $wpdb->insert($table, [
                     'product_id'=>$parent_id,
@@ -71,9 +69,14 @@ class BTLOCS_Admin_Pricing {
             $default_id = $default_location['id'];
             $default_regular = isset($_POST['btlocs_var_regular_price'][$variation_id][$default_id]) ? floatval($_POST['btlocs_var_regular_price'][$variation_id][$default_id]) : '';
             $default_sale = isset($_POST['btlocs_var_sale_price'][$variation_id][$default_id]) ? floatval($_POST['btlocs_var_sale_price'][$variation_id][$default_id]) : '';
-            update_post_meta($variation_id, '_regular_price', $default_regular);
-            update_post_meta($variation_id, '_sale_price', $default_sale);
-            update_post_meta($variation_id, '_price', ($default_sale && $default_sale < $default_regular) ? $default_sale : $default_regular);
+            $final_regular = ($default_regular !== '') ? $default_regular : '';
+            $final_sale = ($default_sale !== '') ? $default_sale : '';
+            update_post_meta($variation_id, '_regular_price', $final_regular);
+            update_post_meta($variation_id, '_sale_price', $final_sale);
+            update_post_meta($variation_id, '_price', ($final_sale && $final_sale < $final_regular) ? $final_sale : $final_regular);
+            wc_delete_product_transients($variation_id);
+            // Uncomment for debugging:
+            // error_log("[BTLOCS] Saved meta for variation $variation_id: regular=$final_regular, sale=$final_sale");
         }
     }
 
@@ -102,9 +105,7 @@ class BTLOCS_Admin_Pricing {
             $location_id = $loc['id'];
             $regular = isset($_POST['btlocs_regular_price'][$location_id]) ? floatval($_POST['btlocs_regular_price'][$location_id]) : null;
             $sale = isset($_POST['btlocs_sale_price'][$location_id]) ? floatval($_POST['btlocs_sale_price'][$location_id]) : null;
-            // Remove old
             $wpdb->delete($table, ['product_id'=>$post_id, 'location_id'=>$location_id, 'variation_id'=>null]);
-            // Insert new if set
             if($regular !== null || $sale !== null) {
                 $wpdb->insert($table, [
                     'product_id'=>$post_id,
@@ -121,9 +122,14 @@ class BTLOCS_Admin_Pricing {
             $default_id = $default_location['id'];
             $default_regular = isset($_POST['btlocs_regular_price'][$default_id]) ? floatval($_POST['btlocs_regular_price'][$default_id]) : '';
             $default_sale = isset($_POST['btlocs_sale_price'][$default_id]) ? floatval($_POST['btlocs_sale_price'][$default_id]) : '';
-            update_post_meta($post_id, '_regular_price', $default_regular);
-            update_post_meta($post_id, '_sale_price', $default_sale);
-            update_post_meta($post_id, '_price', ($default_sale && $default_sale < $default_regular) ? $default_sale : $default_regular);
+            $final_regular = ($default_regular !== '') ? $default_regular : '';
+            $final_sale = ($default_sale !== '') ? $default_sale : '';
+            update_post_meta($post_id, '_regular_price', $final_regular);
+            update_post_meta($post_id, '_sale_price', $final_sale);
+            update_post_meta($post_id, '_price', ($final_sale && $final_sale < $final_regular) ? $final_sale : $final_regular);
+            wc_delete_product_transients($post_id);
+            // Uncomment for debugging:
+            // error_log("[BTLOCS] Saved meta for product $post_id: regular=$final_regular, sale=$final_sale");
         }
     }
 
