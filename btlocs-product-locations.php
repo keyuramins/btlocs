@@ -12,6 +12,16 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// Autoload BTLOCS plugin classes from their respective directories
+require_once __DIR__ . '/includes/class-btlocs-db.php';
+require_once __DIR__ . '/includes/class-btlocs-ajax.php';
+require_once __DIR__ . '/includes/class-btlocs-emails.php';
+require_once __DIR__ . '/includes/class-btlocs-cart.php';
+require_once __DIR__ . '/admin/class-btlocs-admin-locations.php';
+require_once __DIR__ . '/admin/class-btlocs-admin-pricing.php';
+require_once __DIR__ . '/public/class-btlocs-frontend-location.php';
+require_once __DIR__ . '/public/class-btlocs-frontend-pricing.php';
+
 register_activation_hook( __FILE__, function() {
     BTLOCS_Product_Locations::activate_plugin();
     if (class_exists('BTLOCS_DB')) {
@@ -28,16 +38,6 @@ add_action( 'admin_init', function() {
         } );
     }
 } );
-
-// Autoload BTLOCS plugin classes from their respective directories
-require_once __DIR__ . '/includes/class-btlocs-db.php';
-require_once __DIR__ . '/includes/class-btlocs-ajax.php';
-require_once __DIR__ . '/includes/class-btlocs-emails.php';
-require_once __DIR__ . '/includes/class-btlocs-cart.php';
-require_once __DIR__ . '/admin/class-btlocs-admin-locations.php';
-require_once __DIR__ . '/admin/class-btlocs-admin-pricing.php';
-require_once __DIR__ . '/public/class-btlocs-frontend-location.php';
-require_once __DIR__ . '/public/class-btlocs-frontend-pricing.php';
 
 class BTLOCS_Product_Locations {
     public function __construct() {
