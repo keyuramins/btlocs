@@ -96,9 +96,9 @@ class BTLOCS_Admin_Pricing {
     }
 
     public function save_product_prices($post_id) {
-        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
-        if (!current_user_can('edit_product', $post_id)) return;
-        if (!isset($_POST['btlocs_regular_price'], $_POST['btlocs_sale_price'])) return;
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) { error_log('[BTLOCS] DOING_AUTOSAVE for product ' . $post_id); return; }
+        if (!current_user_can('edit_product', $post_id)) { error_log('[BTLOCS] No permission to edit product ' . $post_id); return; }
+        if (!isset($_POST['btlocs_regular_price'], $_POST['btlocs_sale_price'])) { error_log('[BTLOCS] No location price fields in POST for product ' . $post_id); return; }
         $locations = BTLOCS_DB::get_locations();
         global $wpdb;
         $table = $wpdb->prefix . 'btlocs_product_prices';
@@ -106,6 +106,7 @@ class BTLOCS_Admin_Pricing {
             $location_id = $loc['id'];
             $regular = isset($_POST['btlocs_regular_price'][$location_id]) ? floatval($_POST['btlocs_regular_price'][$location_id]) : null;
             $sale = isset($_POST['btlocs_sale_price'][$location_id]) ? floatval($_POST['btlocs_sale_price'][$location_id]) : null;
+            error_log("[BTLOCS] Saving for product $post_id, location $location_id: regular=$regular, sale=$sale");
             $wpdb->delete($table, ['product_id'=>$post_id, 'location_id'=>$location_id, 'variation_id'=>null]);
             if($regular !== null || $sale !== null) {
                 $wpdb->insert($table, [
@@ -125,12 +126,13 @@ class BTLOCS_Admin_Pricing {
             $default_sale = isset($_POST['btlocs_sale_price'][$default_id]) ? floatval($_POST['btlocs_sale_price'][$default_id]) : '';
             $final_regular = ($default_regular !== '') ? $default_regular : '';
             $final_sale = ($default_sale !== '') ? $default_sale : '';
+            error_log("[BTLOCS] Updating meta for product $post_id: _regular_price=$final_regular, _sale_price=$final_sale");
             update_post_meta($post_id, '_regular_price', $final_regular);
             update_post_meta($post_id, '_sale_price', $final_sale);
             update_post_meta($post_id, '_price', ($final_sale && $final_sale < $final_regular) ? $final_sale : $final_regular);
             wc_delete_product_transients($post_id);
-            // Uncomment for debugging:
-            // error_log("[BTLOCS] Saved meta for product $post_id: regular=$final_regular, sale=$final_sale");
+        } else {
+            error_log("[BTLOCS] No default location found for product $post_id");
         }
     }
 
