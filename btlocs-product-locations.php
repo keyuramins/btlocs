@@ -12,7 +12,12 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-register_activation_hook( __FILE__, array( 'BTLOCS_Product_Locations', 'activate_plugin' ) );
+register_activation_hook( __FILE__, function() {
+    BTLOCS_Product_Locations::activate_plugin();
+    if (class_exists('BTLOCS_DB')) {
+        BTLOCS_DB::create_tables();
+    }
+});
 
 // Dependency check for WooCommerce and YITH WooCommerce Product Add-Ons
 add_action( 'admin_init', function() {

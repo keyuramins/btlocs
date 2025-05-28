@@ -137,4 +137,28 @@ class BTLOCS_DB {
         global $wpdb;
         return $wpdb->get_row( "SELECT * FROM " . BTLOCS_TABLE_LOCATIONS . " WHERE is_default = 1 LIMIT 1", ARRAY_A );
     }
+
+    /**
+     * Create custom tables for location-based pricing.
+     * Called on plugin activation.
+     */
+    public static function create_tables() {
+        global $wpdb;
+        $charset_collate = $wpdb->get_charset_collate();
+        // Table for location-based product pricing
+        $table_name = $wpdb->prefix . 'btlocs_product_prices';
+        $sql = "CREATE TABLE $table_name (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            product_id BIGINT UNSIGNED NOT NULL,
+            location_id BIGINT UNSIGNED NOT NULL,
+            regular_price DECIMAL(20,4) NOT NULL DEFAULT 0.0000,
+            sale_price DECIMAL(20,4) DEFAULT NULL,
+            variation_id BIGINT UNSIGNED DEFAULT NULL,
+            PRIMARY KEY (id),
+            KEY product_location (product_id, location_id),
+            KEY variation (variation_id)
+        ) $charset_collate;";
+        require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+        dbDelta( $sql );
+    }
 } 
