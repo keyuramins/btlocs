@@ -149,9 +149,11 @@ class BTLOCS_Admin_Pricing {
         if ($pagenow !== 'post.php' || !$post || $post->post_type !== 'product') return;
         $default_location = BTLOCS_DB::get_default_location();
         if ($default_location) {
-            $regular = get_post_meta($post->ID, '_regular_price', true);
-            $sale = get_post_meta($post->ID, '_sale_price', true);
-            error_log("[BTLOCS] Populating WC price fields for product $post->ID: regular=$regular, sale=$sale");
+            $regular = (string) get_post_meta($post->ID, '_regular_price', true);
+            $sale = (string) get_post_meta($post->ID, '_sale_price', true);
+            error_log("[BTLOCS] Populating WC price fields for product $post->ID: regular=" . get_post_meta($post->ID, '_regular_price', true) . ", sale=" . get_post_meta($post->ID, '_sale_price', true));
+            error_log("[BTLOCS] Regular price: " . get_post_meta($post->ID, '_regular_price', true));
+            error_log("[BTLOCS] Sale price: " . get_post_meta($post->ID, '_sale_price', true));
             echo '<script>
             jQuery(window).on("load", function() {
                 jQuery("#_regular_price").val("' . esc_js($regular) . '");
