@@ -50,37 +50,25 @@ class BTLOCS_Product_Locations {
             'NBT Product Locations',
             'Product Locations',
             'manage_options',
-            'btlocs-product-locations',
-            array( $this, 'render_admin_page' ),
+            'btlocs-manage-locations',
+            array( $this, 'redirect_to_locations' ),
             'dashicons-location-alt',
             56
         );
     }
 
-    public function enqueue_admin_assets( $hook ) {
-        if ( $hook !== 'toplevel_page_btlocs-product-locations' ) {
-            return;
+    public function redirect_to_locations() {
+        // Directly render the locations UI
+        if (class_exists('BTLOCS_Admin_Locations')) {
+            $admin_locations = new BTLOCS_Admin_Locations();
+            $admin_locations->render();
         }
-        // Use WP built-in styles for a modern look
-        wp_enqueue_style( 'wp-components' );
-        wp_enqueue_style( 'btlocs-admin', plugin_dir_url( __FILE__ ) . 'btlocs-admin.css', array(), '1.0.0' );
     }
 
-    public function render_admin_page() {
-        ?>
-        <div class="wrap">
-            <h1>NBT Product Locations</h1>
-            <div id="btlocs-admin-app">
-                <!-- React/Vue/JS UI can be mounted here, or use PHP for server-rendered UI -->
-            </div>
-            <form method="post" action="options.php">
-                <?php
-                // For now, just a placeholder. We'll implement the full UI and logic next.
-                ?>
-                <p>This is where the Product Locations admin UI will appear.</p>
-            </form>
-        </div>
-        <?php
+    public function enqueue_admin_assets( $hook ) {
+        // Optionally enqueue admin styles/scripts here
+        wp_enqueue_style( 'wp-components' );
+        wp_enqueue_style( 'btlocs-admin', plugin_dir_url( __FILE__ ) . 'assets/css/btlocs-admin.css', array(), '1.0.0' );
     }
 
     public static function activate_plugin() {
