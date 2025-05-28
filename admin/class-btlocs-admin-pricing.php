@@ -8,7 +8,7 @@ class BTLOCS_Admin_Pricing {
         add_action('woocommerce_save_product_variation', array($this, 'save_variation_location_pricing'), 10, 2);
         add_action('wp_ajax_btlocs_get_product_prices', array($this, 'ajax_get_product_prices'));
         add_action('wp_ajax_btlocs_save_product_prices', array($this, 'ajax_save_product_prices'));
-        add_action('woocommerce_product_options_pricing', array($this, 'populate_wc_price_fields'));
+        add_action('admin_footer', array($this, 'populate_wc_price_fields'));
     }
 
     public function render_pricing_metabox_after_title($post) {
@@ -135,28 +135,18 @@ class BTLOCS_Admin_Pricing {
     }
 
     public function populate_wc_price_fields() {
-        global $post;
-        if (!$post || $post->post_type !== 'product') return;
+        global $post, $pagenow;
+        if ($pagenow !== 'post.php' || !$post || $post->post_type !== 'product') return;
         $default_location = BTLOCS_DB::get_default_location();
         if ($default_location) {
-            $default_id = $default_location['id'];
-            $regular = '';
-            $sale = '';
-            if (isset($_POST['btlocs_regular_price'][$default_id])) {
-                $regular = floatval($_POST['btlocs_regular_price'][$default_id]);
-            } else {
-                $row = BTLOCS_DB::get_locations(); // fallback to DB
-                $regular = get_post_meta($post->ID, '_regular_price', true);
-            }
-            if (isset($_POST['btlocs_sale_price'][$default_id])) {
-                $sale = floatval($_POST['btlocs_sale_price'][$default_id]);
-            } else {
-                $sale = get_post_meta($post->ID, '_sale_price', true);
-            }
-            echo '<script>jQuery(function($){
-                $("#_regular_price").val("' . esc_js($regular) . '");
-                $("#_sale_price").val("' . esc_js($sale) . '");
-            });</script>';
+            $regular = get_post_meta($post->ID, '_regular_price', true);
+            $sale = get_post_meta($post->ID, '_sale_price', true);
+            echo '<script>
+            jQuery(window).on("load", function() {
+                jQuery("#_regular_price").val("' . esc_js($regular) . '");
+                jQuery("#_sale_price").val("' . esc_js($sale) . '");
+            });
+            </script>';
         }
     }
 
