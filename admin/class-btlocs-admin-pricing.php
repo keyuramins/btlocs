@@ -8,6 +8,7 @@ class BTLOCS_Admin_Pricing {
         add_action('woocommerce_save_product_variation', array($this, 'save_variation_location_pricing'), 10, 2);
         add_action('wp_ajax_btlocs_get_product_prices', array($this, 'ajax_get_product_prices'));
         add_action('wp_ajax_btlocs_save_product_prices', array($this, 'ajax_save_product_prices'));
+        add_action('woocommerce_product_options_pricing', array($this, 'populate_wc_price_fields'));
     }
 
     public function render_pricing_metabox_after_title($post) {
@@ -130,6 +131,32 @@ class BTLOCS_Admin_Pricing {
             wc_delete_product_transients($post_id);
             // Uncomment for debugging:
             // error_log("[BTLOCS] Saved meta for product $post_id: regular=$final_regular, sale=$final_sale");
+        }
+    }
+
+    public function populate_wc_price_fields() {
+        global $post;
+        if (!$post || $post->post_type !== 'product') return;
+        $default_location = BTLOCS_DB::get_default_location();
+        if ($default_location) {
+            $default_id = $default_location['id'];
+            $regular = '';
+            $sale = '';
+            if (isset($_POST['btlocs_regular_price'][$default_id])) {
+                $regular = floatval($_POST['btlocs_regular_price'][$default_id]);
+            } else {
+                $row = BTLOCS_DB::get_locations(); // fallback to DB
+                $regular = get_post_meta($post->ID, '_regular_price', true);
+            }
+            if (isset($_POST['btlocs_sale_price'][$default_id])) {
+                $sale = floatval($_POST['btlocs_sale_price'][$default_id]);
+            } else {
+                $sale = get_post_meta($post->ID, '_sale_price', true);
+            }
+            echo '<script>jQuery(function($){
+                $("#_regular_price").val("' . esc_js($regular) . '");
+                $("#_sale_price").val("' . esc_js($sale) . '");
+            });</script>';
         }
     }
 
