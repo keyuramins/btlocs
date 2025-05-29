@@ -64,13 +64,13 @@ class BTLOCS_Cart {
             }
 
             // Combine location price and add-on price
-            $final_price = ($location_price !== null ? $location_price : $product->get_price()) + $addon_price;
+            $final_price = ($location_price !== null ? $location_price : $product->get_price());
             $product->set_price($final_price);
-            // Set price and totals directly on the cart item for WooCommerce calculations
+            // Set price and totals directly on the cart item for WooCommerce calculations (location price only)
             $cart->cart_contents[$cart_item_key]['data']->set_price($final_price);
             $cart->cart_contents[$cart_item_key]['line_total'] = $final_price * $cart_item['quantity'];
             $cart->cart_contents[$cart_item_key]['line_subtotal'] = $final_price * $cart_item['quantity'];
-            error_log('[BTLOCS] set_cart_item_prices: product_id=' . $product_id . ', location_price=' . $location_price . ', addon_price=' . $addon_price . ', final_price=' . $final_price);
+            error_log('[BTLOCS] set_cart_item_prices: product_id=' . $product_id . ', location_price=' . $location_price . ', addon_price=' . $addon_price . ', final_price=' . $final_price . ', line_total=' . $cart->cart_contents[$cart_item_key]['line_total'] . ', line_subtotal=' . $cart->cart_contents[$cart_item_key]['line_subtotal']);
         }
     }
 
