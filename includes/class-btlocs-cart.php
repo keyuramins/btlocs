@@ -35,11 +35,20 @@ class BTLOCS_Cart {
         foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
             if (!isset($cart_item['product_id']) || empty($cart_item['data'])) continue;
             $product = $cart_item['data'];
+            error_log('[BTLOCS] product=' . print_r($product, true));
             $product_id = $cart_item['product_id'];
+            error_log('[BTLOCS] product_id=' . $product_id);
             $base_price = $this->get_location_price($product_id, $product);
+            error_log('[BTLOCS] base_price=' . $base_price);
+            error_log('[BTLOCS] cart_item=' . print_r($cart_item, true));
+            error_log('[BTLOCS] cart_item_key=' . $cart_item_key);
+            error_log('[BTLOCS] cart_item[yith_wapo_total_options_price]=' . $cart_item['yith_wapo_total_options_price']);  
             $addon_price = isset($cart_item['yith_wapo_total_options_price']) ? floatval($cart_item['yith_wapo_total_options_price']) : 0;
+            error_log('[BTLOCS] addon_price=' . $addon_price);
             $final_price = $base_price + $addon_price;
+            error_log('[BTLOCS] final_price=' . $final_price);
             $product->set_price($final_price);
+            error_log('[BTLOCS] set_price=' . $final_price);
         }
     }
 
