@@ -3,6 +3,8 @@
 class BTLOCS_Cart {
     public function __construct() {
         add_action('woocommerce_before_calculate_totals', array($this, 'set_cart_item_prices'), 99);
+        add_action('woocommerce_before_calculate_totals', array($this, 'set_cart_item_prices'), PHP_INT_MAX);
+        add_action('woocommerce_cart_loaded_from_session', array($this, 'set_cart_item_prices'), 99);
         add_action('init', array($this, 'maybe_empty_cart_on_location_change'));
         add_action('woocommerce_checkout_create_order', array($this, 'save_location_to_order'), 10, 2);
         add_action('woocommerce_order_details_after_order_table', array($this, 'display_location_in_order'), 10, 1);
@@ -65,15 +67,8 @@ class BTLOCS_Cart {
                 }
             }
 
-            $base_price = ($location_price !== null ? $location_price : $product->get_price());
-            $product->set_price($base_price + $addon_price);
-            // Set price and totals directly on the cart item for WooCommerce calculations (location price + add-ons)
-            #$final_line_price = ($base_price + $addon_price) * $cart_item['quantity'];
-            #$cart->cart_contents[$cart_item_key]['data']->set_price($base_price);
-            #$cart->cart_contents[$cart_item_key]['line_total'] = $final_line_price;
-            #$cart->cart_contents[$cart_item_key]['line_subtotal'] = $final_line_price;
-            #error_log('[BTLOCS] set_cart_item_prices: product_id=' . $product_id . ', location_price=' . $base_price . ', addon_price=' . $addon_price . ', final_line_price=' . $final_line_price . ', line_total=' . $cart->cart_contents[$cart_item_key]['line_total'] . ', line_subtotal=' . $cart->cart_contents[$cart_item_key]['line_subtotal']);
-            $final_price = $base_price + $addon_price;
+            $final_price = ($location_price !== null ? $location_price : $product->get_price()) + $addon_price;
+            $product->set_price($final_price);
             $cart_item['data']->set_price($final_price);
             error_log('[BTLOCS] FINAL set_price=' . $final_price);
         }
