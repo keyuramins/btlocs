@@ -27,12 +27,25 @@ class BTLOCS_Frontend_Pricing {
         }
         $regular = isset($row['regular_price']) ? floatval($row['regular_price']) : null;
         $sale = isset($row['sale_price']) ? floatval($row['sale_price']) : null;
-        error_log('[BTLOCS] price_html for product ' . $product_id . ' at location ' . $location_id . ': regular=' . $regular . ', sale=' . $sale . ', row=' . print_r($row, true));
-        if ($sale && $sale < $regular) {
-            // Sale price: strikethrough regular, show sale
-            return '<del>' . wc_price($regular) . '</del> <ins>' . wc_price($sale) . '</ins>';
-        } elseif ($regular !== null) {
-            return '<ins>' . wc_price($regular) . '</ins>';
+        $addon_price = 0;
+        // Try to get add-on price from cart context
+        if (isset($GLOBALS['woocommerce']->cart)) {
+            foreach ($GLOBALS['woocommerce']->cart->get_cart() as $cart_item) {
+                if ($cart_item['product_id'] == $product_id) {
+                    if (isset($cart_item['yith_wapo_total_options_price'])) {
+                        $addon_price = floatval($cart_item['yith_wapo_total_options_price']);
+                    } elseif (isset($cart_item['yith_wapo_addons_price'])) {
+                        $addon_price = floatval($cart_item['yith_wapo_addons_price']);
+                    }
+                    break;
+                }
+            }
+        }
+        $final_display_price = ($sale && $sale < $regular) ? $sale : $regular;
+        if ($final_display_price !== null) {
+            $final_display_price += $addon_price;
+            error_log('[BTLOCS] price_html display for product ' . $product_id . ' at location ' . $location_id . ': base=' . $final_display_price . ', addon=' . $addon_price);
+            return '<ins>' . wc_price($final_display_price) . '</ins>';
         }
         return $price;
     }

@@ -24,6 +24,7 @@ class BTLOCS_Cart {
             }
             return $label;
         }, 100, 2);
+        add_filter('woocommerce_cart_totals_shipping_destination_html', '__return_empty_string', 100);
     }
 
     public function set_cart_item_prices($cart) {
