@@ -2,9 +2,8 @@
 // Handles cart and checkout integration for location-specific pricing in BTLOCS plugin.
 class BTLOCS_Cart {
     public function __construct() {
-        add_action('woocommerce_before_calculate_totals', array($this, 'set_cart_item_prices'), 99);
-        add_action('woocommerce_before_calculate_totals', array($this, 'set_cart_item_prices'), PHP_INT_MAX);
-        add_action('woocommerce_cart_loaded_from_session', array($this, 'set_cart_item_prices'), 99);
+        add_action('woocommerce_before_calculate_totals', array($this, 'set_cart_item_prices'), 1000);
+        add_action('woocommerce_cart_loaded_from_session', array($this, 'set_cart_item_prices'), 1000);
         add_action('init', array($this, 'maybe_empty_cart_on_location_change'));
         add_action('woocommerce_checkout_create_order', array($this, 'save_location_to_order'), 10, 2);
         add_action('woocommerce_order_details_after_order_table', array($this, 'display_location_in_order'), 10, 1);
@@ -33,42 +32,40 @@ class BTLOCS_Cart {
 
     public function set_cart_item_prices($cart) {
         if (is_admin() && !defined('DOING_AJAX')) return;
+        foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
+            if (!isset($cart_item['product_id']) || empty($cart_item['data'])) continue;
+            $product = $cart_item['data'];
+            $product_id = $cart_item['product_id'];
+            $base_price = $this->get_location_price($product_id, $product);
+            $addon_price = isset($cart_item['yith_wapo_total_options_price']) ? floatval($cart_item['yith_wapo_total_options_price']) : 0;
+            $final_price = $base_price + $addon_price;
+            $product->set_price($final_price);
+        }
+    }
+
+    /**
+     * Helper to get the location-based price for a product (simple or variation)
+     */
+    private function get_location_price($product_id, $product = null) {
         $location_id = BTLOCS_Frontend_Location::get_current_location_id();
-        if (!$location_id) return;
+        if (!$location_id) return $product && method_exists($product, 'get_price') ? $product->get_price() : 0;
         global $wpdb;
         $table = $wpdb->prefix . 'btlocs_product_prices';
-        foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
-            $product = $cart_item['data'];
-            $product_id = $product->get_id();
-            $variation_id = $product->is_type('variation') ? $product_id : null;
-            if ($product->is_type('variation')) {
-                $parent_id = $product->get_parent_id();
-                $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE product_id = %d AND location_id = %d AND variation_id = %d", $parent_id, $location_id, $variation_id), ARRAY_A);
-            } else {
-                $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE product_id = %d AND location_id = %d AND (variation_id IS NULL OR variation_id = 0)", $product_id, $location_id), ARRAY_A);
-            }
-            $regular = isset($row['regular_price']) ? floatval($row['regular_price']) : null;
-            $sale = isset($row['sale_price']) ? floatval($row['sale_price']) : null;
-            $location_price = ($sale && $sale < $regular) ? $sale : $regular;
-
-            // Get YITH add-on price for this cart item (if any)
-            $addon_price = 0;
-            if (isset($cart_item['yith_wapo_total_options_price'])) {
-                $addon_price = floatval($cart_item['yith_wapo_total_options_price']);
-            } elseif (isset($cart_item['yith_wapo_addons_price'])) {
-                $addon_price = floatval($cart_item['yith_wapo_addons_price']);
-            } elseif (isset($cart_item['data']) && method_exists($cart_item['data'], 'get_meta')) {
-                $meta_addon_price = $cart_item['data']->get_meta('yith_wapo_addons_price', true);
-                if ($meta_addon_price !== '') {
-                    $addon_price = floatval($meta_addon_price);
-                }
-            }
-            error_log('[BTLOCS] location_price for product ' . $product_id . ' at location ' . $location_id . ': regular=' . $regular . ', sale=' . $sale . ', row=' . print_r($row, true) . ', base price=' . $location_price);
-            $final_price = ($location_price !== null ? $location_price : $product->get_price()) + $addon_price;
-            $product->set_price($final_price);
-            $cart_item['data']->set_price($final_price);
-            error_log('[BTLOCS] FINAL set_price=' . $final_price);
+        $variation_id = ($product && $product->is_type('variation')) ? $product_id : null;
+        if ($product && $product->is_type('variation')) {
+            $parent_id = $product->get_parent_id();
+            $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE product_id = %d AND location_id = %d AND variation_id = %d", $parent_id, $location_id, $variation_id), ARRAY_A);
+        } else {
+            $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE product_id = %d AND location_id = %d AND (variation_id IS NULL OR variation_id = 0)", $product_id, $location_id), ARRAY_A);
         }
+        $regular = isset($row['regular_price']) ? floatval($row['regular_price']) : null;
+        $sale = isset($row['sale_price']) ? floatval($row['sale_price']) : null;
+        if ($sale && $sale < $regular) {
+            return $sale;
+        } elseif ($regular !== null) {
+            return $regular;
+        }
+        return $product && method_exists($product, 'get_price') ? $product->get_price() : 0;
     }
 
     public function maybe_empty_cart_on_location_change() {
