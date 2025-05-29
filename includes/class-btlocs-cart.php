@@ -26,6 +26,9 @@ class BTLOCS_Cart {
         global $wpdb;
         $table = $wpdb->prefix . 'btlocs_product_prices';
         foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
+            if ($cart_item_key === array_key_first($cart->get_cart())) {
+                error_log('[BTLOCS] DEBUG cart_item array: ' . print_r($cart_item, true));
+            }
             $product = $cart_item['data'];
             $product_id = $product->get_id();
             $variation_id = $product->is_type('variation') ? $product_id : null;
