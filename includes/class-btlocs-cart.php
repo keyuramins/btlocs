@@ -44,10 +44,15 @@ class BTLOCS_Cart {
 
             // Get YITH add-on price for this cart item (if any)
             $addon_price = 0;
-            if (isset($cart_item['yith_wapo_price'])) {
-                $addon_price = floatval($cart_item['yith_wapo_price']);
+            if (isset($cart_item['yith_wapo_total_options_price'])) {
+                $addon_price = floatval($cart_item['yith_wapo_total_options_price']);
             } elseif (isset($cart_item['yith_wapo_addons_price'])) {
                 $addon_price = floatval($cart_item['yith_wapo_addons_price']);
+            } elseif (isset($cart_item['data']) && method_exists($cart_item['data'], 'get_meta')) {
+                $meta_addon_price = $cart_item['data']->get_meta('yith_wapo_addons_price', true);
+                if ($meta_addon_price !== '') {
+                    $addon_price = floatval($meta_addon_price);
+                }
             }
 
             // Combine location price and add-on price
@@ -188,10 +193,15 @@ class BTLOCS_Cart {
 
         // Get YITH add-on price for this cart item (if any)
         $addon_price = 0;
-        if (isset($values['yith_wapo_price'])) {
-            $addon_price = floatval($values['yith_wapo_price']);
+        if (isset($values['yith_wapo_total_options_price'])) {
+            $addon_price = floatval($values['yith_wapo_total_options_price']);
         } elseif (isset($values['yith_wapo_addons_price'])) {
             $addon_price = floatval($values['yith_wapo_addons_price']);
+        } elseif (isset($values['data']) && method_exists($values['data'], 'get_meta')) {
+            $meta_addon_price = $values['data']->get_meta('yith_wapo_addons_price', true);
+            if ($meta_addon_price !== '') {
+                $addon_price = floatval($meta_addon_price);
+            }
         }
 
         $final_price = ($location_price !== null ? $location_price : $product->get_price()) + $addon_price;
