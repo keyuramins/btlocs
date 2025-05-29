@@ -67,6 +67,7 @@ class BTLOCS_Cart {
             $final_price = ($location_price !== null ? $location_price : $product->get_price()) + $addon_price;
             $product->set_price($final_price);
             $cart_item['data']->set_price($final_price);
+            error_log('[BTLOCS] FINAL set_price=' . $final_price);
         }
     }
 
