@@ -27,6 +27,7 @@ class BTLOCS_Frontend_Pricing {
         }
         $regular = isset($row['regular_price']) ? floatval($row['regular_price']) : null;
         $sale = isset($row['sale_price']) ? floatval($row['sale_price']) : null;
+        error_log('[BTLOCS] price_html for product ' . $product_id . ' at location ' . $location_id . ': regular=' . $regular . ', sale=' . $sale . ', row=' . print_r($row, true));
         if ($sale && $sale < $regular) {
             // Sale price: strikethrough regular, show sale
             return '<del>' . wc_price($regular) . '</del> <ins>' . wc_price($sale) . '</ins>';
@@ -74,6 +75,7 @@ class BTLOCS_Frontend_Pricing {
         }
         $regular = isset($row['regular_price']) ? floatval($row['regular_price']) : null;
         $sale = isset($row['sale_price']) ? floatval($row['sale_price']) : null;
+        error_log('[BTLOCS] location_price for product ' . $product_id . ' at location ' . $location_id . ': regular=' . $regular . ', sale=' . $sale . ', row=' . print_r($row, true) . ', base price=' . $price);
         if ($sale && $sale < $regular) {
             return $sale;
         } elseif ($regular !== null) {

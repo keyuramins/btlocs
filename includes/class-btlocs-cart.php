@@ -10,6 +10,11 @@ class BTLOCS_Cart {
         // YITH Product Add-Ons integration
         add_filter('yith_wapo_product_price', array($this, 'yith_location_base_price'), 99, 2);
         add_filter('yith_wapo_product_price_new', array($this, 'yith_location_base_price'), 99, 2);
+        // Filter shipping methods and label
+        add_filter('woocommerce_package_rates', array($this, 'filter_shipping_methods_to_location'), 99, 2);
+        add_filter('woocommerce_shipping_package_name', array($this, 'rename_shipping_label'), 99, 3);
+        add_filter('woocommerce_cart_shipping_method_full_label', array($this, 'rename_shipping_method_label'), 99, 2);
+        add_filter('woocommerce_cart_totals_shipping_method_label', array($this, 'rename_shipping_method_label'), 99, 2);
     }
 
     public function set_cart_item_prices($cart) {
@@ -93,6 +98,55 @@ class BTLOCS_Cart {
             return $regular;
         }
         return $price;
+    }
+
+    /**
+     * Filter shipping methods to only show the selected location as a pick-up option.
+     */
+    public function filter_shipping_methods_to_location($rates, $package) {
+        $location_id = BTLOCS_Frontend_Location::get_current_location_id();
+        if (!$location_id) return $rates;
+        $location = BTLOCS_DB::get_location($location_id);
+        error_log('[BTLOCS] Filtering shipping methods for location: ' . print_r($location, true));
+        // Remove all rates and add only one for the selected location
+        $new_rates = array();
+        if ($location) {
+            $rate_id = 'btlocs_pickup_' . $location_id;
+            $rate = new WC_Shipping_Rate(
+                $rate_id,
+                'Pick-up: ' . $location['location_name'],
+                0,
+                array(),
+                'btlocs_pickup'
+            );
+            $new_rates[$rate_id] = $rate;
+        }
+        return !empty($new_rates) ? $new_rates : $rates;
+    }
+
+    /**
+     * Rename the shipping label to 'Pick-up Location'.
+     */
+    public function rename_shipping_label($package_name, $index, $package) {
+        $location_id = BTLOCS_Frontend_Location::get_current_location_id();
+        $location = BTLOCS_DB::get_location($location_id);
+        $label = __('Pick-up Location', 'btlocs');
+        if ($location) {
+            $label .= ': ' . $location['location_name'];
+        }
+        error_log('[BTLOCS] Renaming shipping label to: ' . $label);
+        return $label;
+    }
+
+    /**
+     * Rename the shipping method label in cart/checkout.
+     */
+    public function rename_shipping_method_label($label, $method) {
+        if (strpos($label, 'Pick-up:') !== false || strpos($label, 'Pickup:') !== false) {
+            $label = str_replace(['Pick-up:', 'Pickup:'], __('Pick-up Location:', 'btlocs'), $label);
+        }
+        error_log('[BTLOCS] Renaming shipping method label to: ' . $label);
+        return $label;
     }
 }
 new BTLOCS_Cart(); 
