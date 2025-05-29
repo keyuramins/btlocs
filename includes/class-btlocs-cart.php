@@ -25,6 +25,8 @@ class BTLOCS_Cart {
             return $label;
         }, 100, 2);
         add_filter('woocommerce_cart_totals_shipping_destination_html', '__return_empty_string', 100);
+        // Force YITH to recalculate add-on prices in the cart using our base price
+        add_filter('yith_wapo_calculate_addons_price_in_cart', '__return_true', 99);
     }
 
     public function set_cart_item_prices($cart) {
