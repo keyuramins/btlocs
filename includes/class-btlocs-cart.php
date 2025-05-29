@@ -17,6 +17,13 @@ class BTLOCS_Cart {
         add_filter('woocommerce_cart_totals_shipping_method_label', array($this, 'rename_shipping_method_label'), 99, 2);
         // Ensure correct price on order line item
         add_action('woocommerce_checkout_create_order_line_item', array($this, 'set_order_line_item_price'), 99, 4);
+        // Remove WooCommerce's default shipping destination string from cart/checkout totals
+        add_filter('woocommerce_cart_shipping_method_full_label', function($label, $method) {
+            if (strpos($label, 'Shipping to') !== false) {
+                return '';
+            }
+            return $label;
+        }, 100, 2);
     }
 
     public function set_cart_item_prices($cart) {
@@ -58,6 +65,10 @@ class BTLOCS_Cart {
             // Combine location price and add-on price
             $final_price = ($location_price !== null ? $location_price : $product->get_price()) + $addon_price;
             $product->set_price($final_price);
+            // Set price and totals directly on the cart item for WooCommerce calculations
+            $cart->cart_contents[$cart_item_key]['data']->set_price($final_price);
+            $cart->cart_contents[$cart_item_key]['line_total'] = $final_price * $cart_item['quantity'];
+            $cart->cart_contents[$cart_item_key]['line_subtotal'] = $final_price * $cart_item['quantity'];
             error_log('[BTLOCS] set_cart_item_prices: product_id=' . $product_id . ', location_price=' . $location_price . ', addon_price=' . $addon_price . ', final_price=' . $final_price);
         }
     }
@@ -89,7 +100,7 @@ class BTLOCS_Cart {
         $location_name = $order->get_meta('_btlocs_location_name');
         $location_address = $order->get_meta('_btlocs_location_address');
         if ($location_name && $location_address) {
-            echo '<p><strong>Pickup Location:</strong> ' . esc_html($location_name) . ' - ' . esc_html($location_address) . '</p>';
+            echo '<p><strong>Pick-up From:</strong> ' . esc_html($location_name) . ' - ' . esc_html($location_address) . '</p>';
         }
     }
 
@@ -144,12 +155,12 @@ class BTLOCS_Cart {
     }
 
     /**
-     * Rename the shipping label to 'Pick-up Location'.
+     * Rename the shipping label to 'Pick-up Address'.
      */
     public function rename_shipping_label($package_name, $index, $package) {
         $location_id = BTLOCS_Frontend_Location::get_current_location_id();
         $location = BTLOCS_DB::get_location($location_id);
-        $label = __('Pick-up Location', 'btlocs');
+        $label = __('Pick-up Address', 'btlocs');
         if ($location) {
             $label .= ': ' . $location['address'];
         }
@@ -165,7 +176,7 @@ class BTLOCS_Cart {
             return $label;
         }
         if (strpos($label, 'Pick-up:') !== false || strpos($label, 'Pickup:') !== false) {
-            $label = str_replace(['Pick-up:', 'Pickup:'], __('Pick-up Location:', 'btlocs'), $label);
+            $label = str_replace(['Pick-up:', 'Pickup:'], __('Pick-up Address:', 'btlocs'), $label);
         }
         error_log('[BTLOCS] Renaming shipping method label to: ' . $label);
         return $label;
