@@ -20,7 +20,6 @@ class BTLOCS_Admin_Pricing {
         echo '<table class="widefat"><thead><tr><th>Location</th><th>Regular Price</th><th>Sale Price</th></tr></thead><tbody>';
         foreach($locations as $loc) {
             $price = $this->get_product_price($product_id, $loc['id']);
-            error_log("[BTLOCS] Price for product $product_id, location $loc[id]: " . print_r($price, true));
             echo '<tr>';
             echo '<td>' . esc_html($loc['location_name']) . '</td>';
             echo '<td><input type="number" step="0.01" min="0" name="btlocs_regular_price['.esc_attr($loc['id']).']" value="'.esc_attr($price['regular_price']).'" /></td>';
@@ -37,7 +36,6 @@ class BTLOCS_Admin_Pricing {
         echo '<strong>Location-Based Pricing</strong><br />';
         foreach($locations as $loc) {
             $price = $this->get_product_price($variation->post_parent, $loc['id'], $variation_id);
-            error_log("[BTLOCS] Price for variation $variation_id, location $loc[id]: " . print_r($price, true));
             echo esc_html($loc['location_name']) . ': ';
             echo '<input type="number" step="0.01" min="0" name="btlocs_var_regular_price['.$variation_id.']['.$loc['id'].']" value="'.esc_attr($price['regular_price']).'" placeholder="Regular" style="width:80px;" /> ';
             echo '<input type="number" step="0.01" min="0" name="btlocs_var_sale_price['.$variation_id.']['.$loc['id'].']" value="'.esc_attr($price['sale_price']).'" placeholder="Sale" style="width:80px;" /> ';
@@ -64,25 +62,20 @@ class BTLOCS_Admin_Pricing {
                     'sale_price'=>$sale,
                     'variation_id'=>$variation_id
                 ]);
-                error_log("[BTLOCS] Inserted for variation $variation_id, location $location_id: regular=$regular, sale=$sale");
             }
         }
         // Fallback: set WooCommerce price meta for default location
         $default_location = BTLOCS_DB::get_default_location();
-        error_log("[BTLOCS] Default location: " . print_r($default_location, true));
         if ($default_location) {
             $default_id = $default_location['id'];
             $default_regular = isset($_POST['btlocs_var_regular_price'][$variation_id][$default_id]) ? floatval($_POST['btlocs_var_regular_price'][$variation_id][$default_id]) : '';
             $default_sale = isset($_POST['btlocs_var_sale_price'][$variation_id][$default_id]) ? floatval($_POST['btlocs_var_sale_price'][$variation_id][$default_id]) : '';
             $final_regular = ($default_regular !== '') ? $default_regular : '';
             $final_sale = ($default_sale !== '') ? $default_sale : '';
-            error_log("[BTLOCS] Saving for variation $variation_id: regular=$final_regular, sale=$final_sale");
             update_post_meta($variation_id, '_regular_price', $final_regular);
             update_post_meta($variation_id, '_sale_price', $final_sale);
             update_post_meta($variation_id, '_price', ($final_sale && $final_sale < $final_regular) ? $final_sale : $final_regular);
             wc_delete_product_transients($variation_id);
-            // Uncomment for debugging:
-            // error_log("[BTLOCS] Saved meta for variation $variation_id: regular=$final_regular, sale=$final_sale");
         }
     }
 
@@ -98,13 +91,12 @@ class BTLOCS_Admin_Pricing {
             'regular_price' => $row['regular_price'] ?? '',
             'sale_price' => $row['sale_price'] ?? ''
         ];
-        error_log("[BTLOCS] Price for product $product_id, location $location_id, variation $variation_id: " . print_r($row, true));
     }
 
     public function save_product_prices($post_id) {
-        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) { error_log('[BTLOCS] DOING_AUTOSAVE for product ' . $post_id); return; }
-        if (!current_user_can('edit_product', $post_id)) { error_log('[BTLOCS] No permission to edit product ' . $post_id); return; }
-        if (!isset($_POST['btlocs_regular_price'], $_POST['btlocs_sale_price'])) { error_log('[BTLOCS] No location price fields in POST for product ' . $post_id); return; }
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+        if (!current_user_can('edit_product', $post_id)) return;
+        if (!isset($_POST['btlocs_regular_price'], $_POST['btlocs_sale_price'])) return;
         $locations = BTLOCS_DB::get_locations();
         global $wpdb;
         $table = $wpdb->prefix . 'btlocs_product_prices';
@@ -112,7 +104,6 @@ class BTLOCS_Admin_Pricing {
             $location_id = $loc['id'];
             $regular = isset($_POST['btlocs_regular_price'][$location_id]) ? floatval($_POST['btlocs_regular_price'][$location_id]) : null;
             $sale = isset($_POST['btlocs_sale_price'][$location_id]) ? floatval($_POST['btlocs_sale_price'][$location_id]) : null;
-            error_log("[BTLOCS] Saving for product $post_id, location $location_id: regular=$regular, sale=$sale");
             $wpdb->delete($table, ['product_id'=>$post_id, 'location_id'=>$location_id, 'variation_id'=>null]);
             if($regular !== null || $sale !== null) {
                 $wpdb->insert($table, [
@@ -122,25 +113,20 @@ class BTLOCS_Admin_Pricing {
                     'sale_price'=>$sale,
                     'variation_id'=>null
                 ]);
-                error_log("[BTLOCS] Inserted for product $post_id, location $location_id: regular=$regular, sale=$sale");
             }
         }
         // Fallback: set WooCommerce price meta to default location's price
         $default_location = BTLOCS_DB::get_default_location();
-        error_log("[BTLOCS] Default location: " . print_r($default_location, true));
         if ($default_location) {
             $default_id = $default_location['id'];
             $default_regular = isset($_POST['btlocs_regular_price'][$default_id]) ? floatval($_POST['btlocs_regular_price'][$default_id]) : '';
             $default_sale = isset($_POST['btlocs_sale_price'][$default_id]) ? floatval($_POST['btlocs_sale_price'][$default_id]) : '';
             $final_regular = ($default_regular !== '') ? $default_regular : '';
             $final_sale = ($default_sale !== '') ? $default_sale : '';
-            error_log("[BTLOCS] Updating meta for product $post_id: _regular_price=$final_regular, _sale_price=$final_sale");
             update_post_meta($post_id, '_regular_price', $final_regular);
             update_post_meta($post_id, '_sale_price', $final_sale);
             update_post_meta($post_id, '_price', ($final_sale && $final_sale < $final_regular) ? $final_sale : $final_regular);
             wc_delete_product_transients($post_id);
-        } else {
-            error_log("[BTLOCS] No default location found for product $post_id");
         }
     }
 
@@ -152,7 +138,6 @@ class BTLOCS_Admin_Pricing {
             $price = $this->get_product_price($post->ID, $default_location['id']);
             $regular = (string) $price['regular_price'];
             $sale = (string) $price['sale_price'];
-            error_log("[BTLOCS] Populating WC price fields for product $post->ID from BTLOCS tables: regular=$regular, sale=$sale");
             echo '<script>
             jQuery(window).on("load", function() {
                 jQuery("#_regular_price").val("' . esc_js($regular) . '");

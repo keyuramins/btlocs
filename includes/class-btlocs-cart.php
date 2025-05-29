@@ -38,9 +38,6 @@ class BTLOCS_Cart {
         global $wpdb;
         $table = $wpdb->prefix . 'btlocs_product_prices';
         foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
-            if ($cart_item_key === array_key_first($cart->get_cart())) {
-                error_log('[BTLOCS] DEBUG cart_item array: ' . print_r($cart_item, true));
-            }
             $product = $cart_item['data'];
             $product_id = $product->get_id();
             $variation_id = $product->is_type('variation') ? $product_id : null;
@@ -66,11 +63,10 @@ class BTLOCS_Cart {
                     $addon_price = floatval($meta_addon_price);
                 }
             }
-
+            error_log('[BTLOCS] location_price for product ' . $product_id . ' at location ' . $location_id . ': regular=' . $regular . ', sale=' . $sale . ', row=' . print_r($row, true) . ', base price=' . $location_price);
             $final_price = ($location_price !== null ? $location_price : $product->get_price()) + $addon_price;
             $product->set_price($final_price);
             $cart_item['data']->set_price($final_price);
-            error_log('[BTLOCS] FINAL set_price=' . $final_price);
         }
     }
 
@@ -138,7 +134,6 @@ class BTLOCS_Cart {
         $location_id = BTLOCS_Frontend_Location::get_current_location_id();
         if (!$location_id) return $rates;
         $location = BTLOCS_DB::get_location($location_id);
-        error_log('[BTLOCS] Filtering shipping methods for location: ' . print_r($location, true));
         // Remove all rates and add only one for the selected location
         $new_rates = array();
         if ($location) {
@@ -165,7 +160,6 @@ class BTLOCS_Cart {
         if ($location) {
             $label .= ': ' . $location['address'];
         }
-        error_log('[BTLOCS] Renaming shipping label to: ' . $label);
         return $label;
     }
 
@@ -179,7 +173,6 @@ class BTLOCS_Cart {
         if (strpos($label, 'Pick-up:') !== false || strpos($label, 'Pickup:') !== false) {
             $label = str_replace(['Pick-up:', 'Pickup:'], __('Pick-up Address:', 'btlocs'), $label);
         }
-        error_log('[BTLOCS] Renaming shipping method label to: ' . $label);
         return $label;
     }
 
@@ -220,7 +213,6 @@ class BTLOCS_Cart {
         $item->set_subtotal($final_price * $item->get_quantity());
         $item->set_total($final_price * $item->get_quantity());
         $item->add_meta_data('_btlocs_final_price', $final_price, true);
-        error_log('[BTLOCS] set_order_line_item_price: product_id=' . $product_id . ', location_price=' . $location_price . ', addon_price=' . $addon_price . ', final_price=' . $final_price);
     }
 }
 new BTLOCS_Cart(); 

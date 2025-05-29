@@ -44,7 +44,6 @@ class BTLOCS_Frontend_Pricing {
         $final_display_price = ($sale && $sale < $regular) ? $sale : $regular;
         if ($final_display_price !== null) {
             $final_display_price += $addon_price;
-            error_log('[BTLOCS] price_html display for product ' . $product_id . ' at location ' . $location_id . ': base=' . $final_display_price . ', addon=' . $addon_price);
             return '<ins>' . wc_price($final_display_price) . '</ins>';
         }
         return $price;
@@ -88,7 +87,6 @@ class BTLOCS_Frontend_Pricing {
         }
         $regular = isset($row['regular_price']) ? floatval($row['regular_price']) : null;
         $sale = isset($row['sale_price']) ? floatval($row['sale_price']) : null;
-        error_log('[BTLOCS] location_price for product ' . $product_id . ' at location ' . $location_id . ': regular=' . $regular . ', sale=' . $sale . ', row=' . print_r($row, true) . ', base price=' . $price);
         if ($sale && $sale < $regular) {
             return $sale;
         } elseif ($regular !== null) {
