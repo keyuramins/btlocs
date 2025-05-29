@@ -15,6 +15,8 @@ class BTLOCS_Cart {
         add_filter('woocommerce_shipping_package_name', array($this, 'rename_shipping_label'), 99, 3);
         add_filter('woocommerce_cart_shipping_method_full_label', array($this, 'rename_shipping_method_label'), 99, 2);
         add_filter('woocommerce_cart_totals_shipping_method_label', array($this, 'rename_shipping_method_label'), 99, 2);
+        // Ensure correct price on order line item
+        add_action('woocommerce_checkout_create_order_line_item', array($this, 'set_order_line_item_price'), 99, 4);
     }
 
     public function set_cart_item_prices($cart) {
@@ -35,11 +37,18 @@ class BTLOCS_Cart {
             }
             $regular = isset($row['regular_price']) ? floatval($row['regular_price']) : null;
             $sale = isset($row['sale_price']) ? floatval($row['sale_price']) : null;
-            if ($sale && $sale < $regular) {
-                $product->set_price($sale);
-            } elseif ($regular !== null) {
-                $product->set_price($regular);
+            $location_price = ($sale && $sale < $regular) ? $sale : $regular;
+
+            // Get YITH add-on price for this cart item (if any)
+            $addon_price = 0;
+            if (isset($cart_item['yith_wapo_options']) && function_exists('YITH_WAPO_Cart')) {
+                $addon_price = YITH_WAPO_Cart()->get_item_price_total($cart_item, $cart_item_key);
             }
+
+            // Combine location price and add-on price
+            $final_price = ($location_price !== null ? $location_price : $product->get_price()) + $addon_price;
+            $product->set_price($final_price);
+            error_log('[BTLOCS] set_cart_item_prices: product_id=' . $product_id . ', location_price=' . $location_price . ', addon_price=' . $addon_price . ', final_price=' . $final_price);
         }
     }
 
@@ -114,7 +123,7 @@ class BTLOCS_Cart {
             $rate_id = 'btlocs_pickup_' . $location_id;
             $rate = new WC_Shipping_Rate(
                 $rate_id,
-                'Pick-up: ' . $location['location_name'],
+                'Pick-up: ' . $location['address'],
                 0,
                 array(),
                 'btlocs_pickup'
@@ -132,7 +141,7 @@ class BTLOCS_Cart {
         $location = BTLOCS_DB::get_location($location_id);
         $label = __('Pick-up Location', 'btlocs');
         if ($location) {
-            $label .= ': ' . $location['location_name'];
+            $label .= ': ' . $location['address'];
         }
         error_log('[BTLOCS] Renaming shipping label to: ' . $label);
         return $label;
@@ -142,11 +151,47 @@ class BTLOCS_Cart {
      * Rename the shipping method label in cart/checkout.
      */
     public function rename_shipping_method_label($label, $method) {
+        if (!is_string($label) || $label === null) {
+            return $label;
+        }
         if (strpos($label, 'Pick-up:') !== false || strpos($label, 'Pickup:') !== false) {
             $label = str_replace(['Pick-up:', 'Pickup:'], __('Pick-up Location:', 'btlocs'), $label);
         }
         error_log('[BTLOCS] Renaming shipping method label to: ' . $label);
         return $label;
+    }
+
+    /**
+     * Ensure the correct price (location + add-on) is set on the order line item.
+     */
+    public function set_order_line_item_price($item, $cart_item_key, $values, $order) {
+        global $wpdb;
+        $location_id = BTLOCS_Frontend_Location::get_current_location_id();
+        $table = $wpdb->prefix . 'btlocs_product_prices';
+        $product = $values['data'];
+        $product_id = $product->get_id();
+        $variation_id = $product->is_type('variation') ? $product_id : null;
+        if ($product->is_type('variation')) {
+            $parent_id = $product->get_parent_id();
+            $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE product_id = %d AND location_id = %d AND variation_id = %d", $parent_id, $location_id, $variation_id), ARRAY_A);
+        } else {
+            $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE product_id = %d AND location_id = %d AND (variation_id IS NULL OR variation_id = 0)", $product_id, $location_id), ARRAY_A);
+        }
+        $regular = isset($row['regular_price']) ? floatval($row['regular_price']) : null;
+        $sale = isset($row['sale_price']) ? floatval($row['sale_price']) : null;
+        $location_price = ($sale && $sale < $regular) ? $sale : $regular;
+
+        // Get YITH add-on price for this cart item (if any)
+        $addon_price = 0;
+        if (isset($values['yith_wapo_options']) && function_exists('YITH_WAPO_Cart')) {
+            $addon_price = YITH_WAPO_Cart()->get_item_price_total($values, $cart_item_key);
+        }
+
+        $final_price = ($location_price !== null ? $location_price : $product->get_price()) + $addon_price;
+        $item->set_subtotal($final_price * $item->get_quantity());
+        $item->set_total($final_price * $item->get_quantity());
+        $item->add_meta_data('_btlocs_final_price', $final_price, true);
+        error_log('[BTLOCS] set_order_line_item_price: product_id=' . $product_id . ', location_price=' . $location_price . ', addon_price=' . $addon_price . ', final_price=' . $final_price);
     }
 }
 new BTLOCS_Cart(); 
